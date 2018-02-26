@@ -1,4 +1,5 @@
 const product = require('../models').product;
+const amqp = require('amqplib/callback_api');
 
 module.exports = {
     create(req, res) {
@@ -13,8 +14,9 @@ module.exports = {
                 information: req.body.information,
                 categoryId: req.params.categoryId,
             })
-            .then(product => res.status(201).send(product))
+            .then(product => {res.status(201).send(product); sendToQueue(product.dataValues)})
             .catch(error => res.status(400).send(error));
+
     },
 
     update(req, res) {
@@ -72,3 +74,26 @@ module.exports = {
             .catch(error => res.status(400).send(error));
     },
 };
+
+function sendToQueue(product)
+{
+    //const queueIp = process.env.API_QUEUE;
+    const queueIp = "192.168.50.4";
+
+    amqp.connect('amqp://test:test@' + queueIp + ':5672', function(err, conn)
+    {
+        conn.createChannel(function(err, ch)
+        {
+            /*const q = 'test';
+            ch.assertQueue(q, {durable: false});
+            ch.sendToQueue(q, new Buffer(JSON.stringify(product)));*/
+
+            const ex = 'products';
+
+            ch.assertExchange(ex, 'fanout', {durable: false});
+            ch.publish(ex, '', new Buffer(JSON.stringify(product)));
+
+            console.log(" [x] Sent " + product);
+        });
+    });
+}
