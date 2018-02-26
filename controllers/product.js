@@ -14,7 +14,7 @@ module.exports = {
                 information: req.body.information,
                 categoryId: req.params.categoryId,
             })
-            .then(product => {res.status(201).send(product); sendToQueue(product.dataValues)})
+            .then(product => {res.status(201).send(product); sendToQueue(product.dataValues, "products")})
             .catch(error => res.status(400).send(error));
 
     },
@@ -68,17 +68,16 @@ module.exports = {
 
                 return product
                     .destroy()
-                    .then(() => res.status(204).send())
+                    .then(() => {res.status(204).send()})
                     .catch(error => res.status(400).send(error));
             })
             .catch(error => res.status(400).send(error));
     },
 };
 
-function sendToQueue(product)
+function sendToQueue(product, queue)
 {
-    //const queueIp = process.env.API_QUEUE;
-    const queueIp = "192.168.50.4";
+    const queueIp = process.env.API_QUEUE || "192.168.50.4";
 
     amqp.connect('amqp://test:test@' + queueIp + ':5672', function(err, conn)
     {
@@ -88,10 +87,10 @@ function sendToQueue(product)
             ch.assertQueue(q, {durable: false});
             ch.sendToQueue(q, new Buffer(JSON.stringify(product)));*/
 
-            const ex = 'products';
+            //const ex = 'products';
 
-            ch.assertExchange(ex, 'fanout', {durable: false});
-            ch.publish(ex, '', new Buffer(JSON.stringify(product)));
+            ch.assertExchange(queue, 'fanout', {durable: false});
+            ch.publish(queue, '', new Buffer(JSON.stringify(product)));
 
             console.log(" [x] Sent " + product);
         });
