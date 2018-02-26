@@ -4,4 +4,4 @@ COPY package*.json ./
 COPY . .
 RUN npm install
 CMD sequelize db:migrate
-CMD npm run start:dev
+CMD node ./bin/www
